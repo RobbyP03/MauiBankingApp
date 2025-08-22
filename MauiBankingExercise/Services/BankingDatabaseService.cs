@@ -38,6 +38,21 @@ namespace MauiBankingExercise.Services
             return _dbConnection.Table<Customer>().ToList();
         }
 
+        public Customer? GetCustomerById(int id)
+        {
+            return _dbConnection.Table<Customer>().FirstOrDefault(c => c.CustomerId == id);
+        }
+
+        public void UpdateCustomer(Customer customer)
+        {
+            _dbConnection.Update(customer);
+        }
+
+        public void DeleteCustomer(int customerId)
+        {
+            _dbConnection.Delete<Customer>(customerId);
+        }
+
 
     }
 }
