@@ -27,7 +27,8 @@
         </Style>
     </views:BasePage.Resources>
 
-    <CollectionView ItemsSource="{Binding TheCustomers}" SelectionMode="Single" SelectedItem="{Binding SelectedCustomer}" SelectionChangedCommand="{Binding CustomerSelectedCommand}">
+    <CollectionView ItemsSource="{Binding TheCustomers}" 
+        SelectionMode="Single" SelectedItem="{Binding SelectedCustomer}" SelectionChangedCommand="{Binding CustomerSelectedCommand}">
         <CollectionView.ItemTemplate>
             <DataTemplate x:DataType="models:Customer">
 

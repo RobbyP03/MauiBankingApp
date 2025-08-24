@@ -1,5 +1,6 @@
 ﻿using MauiBankingExercise.Models;
 using SQLite;
+using SQLiteNetExtensions.Extensions;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -7,17 +8,6 @@ namespace MauiBankingExercise.Services
 {
     public class BankingDatabaseService
     {
-        private static BankingDatabaseService _instance;
-
-        public static BankingDatabaseService GetInstance()
-        {
-            if (_instance == null)
-            {
-                _instance = new BankingDatabaseService();
-            }
-            return _instance;
-        }
-
         private SQLiteConnection _dbConnection;
 
         public string GetDatabasePath()
@@ -43,16 +33,50 @@ namespace MauiBankingExercise.Services
             return _dbConnection.Table<Customer>().FirstOrDefault(c => c.CustomerId == id);
         }
 
-        public void UpdateCustomer(Customer customer)
+        public List<Account> GetAccountsByCustomerId(int customerId)
         {
-            _dbConnection.Update(customer);
+            var accounts = _dbConnection.Table<Account>()
+                               .Where(a => a.CustomerId == customerId)
+                               .ToList();
+
+            // Load related data for each account
+            foreach (var account in accounts)
+            {
+                _dbConnection.GetChildren(account);
+            }
+
+            return accounts;
         }
 
-        public void DeleteCustomer(int customerId)
+        public Account? GetAccountById(int accountId)
         {
-            _dbConnection.Delete<Customer>(customerId);
+            var account = _dbConnection.Table<Account>()
+                            .FirstOrDefault(a => a.AccountId == accountId);
+
+            if (account != null)
+            {
+                _dbConnection.GetChildren(account);
+            }
+
+            return account;
         }
 
+        public void AddTransaction(Transaction transaction)
+        {
+            _dbConnection.Insert(transaction);
+        }
 
+        public void UpdateAccount(Account account)
+        {
+            _dbConnection.Update(account);
+        }
+
+        public List<Transaction> GetTransactionsByAccountId(int accountId)
+        {
+            return _dbConnection.Table<Transaction>()
+                               .Where(t => t.AccountId == accountId)
+                               .OrderByDescending(t => t.TransactionDate)
+                               .ToList();
+        }
     }
 }

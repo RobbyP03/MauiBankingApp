@@ -8,7 +8,13 @@ namespace MauiBankingExercise
         public AppShell()
         {
             InitializeComponent();
-            //Routing.RegisterRoute("CustomerDashboardView", typeof(CustomerDashboardView));
+            RegisterRoutes();
+        }
+
+        private void RegisterRoutes()
+        {
+            Routing.RegisterRoute("CustomerDashboardroute", typeof(CustomerDashboardView));
+            Routing.RegisterRoute("updateTransactionroute", typeof(TransactionView));
         }
     }
 }

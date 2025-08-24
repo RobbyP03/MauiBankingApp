@@ -41,21 +41,21 @@ namespace MauiBankingExercise.ViewModels
         {
             _databaseService = service;
 
-            //CustomerSelectedCommand = new Command(CustomerSelected);
+            CustomerSelectedCommand = new Command(CustomerSelected);
         }
 
-        //private async void CustomerSelected(object obj)
-        //{
-        //    if (SelectedCustomer != null)
-        //    {
-        //        var param = new ShellNavigationQueryParameters()
-        //        {
-        //            { "CustomerId", SelectedCustomer.CustomerId }
-        //        };
-        //        await AppShell.Current.GoToAsync("CustomerDashboardroute", param);
-            //}
+        private async void CustomerSelected(object obj)
+        {
+            if (SelectedCustomer != null)
+            {
+                var param = new ShellNavigationQueryParameters()
+                {
+                    { "CustomerId", SelectedCustomer.CustomerId }
+                };
+                await AppShell.Current.GoToAsync("CustomerDashboardroute", param);
+            }
 
-        //}
+        }
         public override void OnAppearing()
         {
             base.OnAppearing();

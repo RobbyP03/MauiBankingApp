@@ -7,8 +7,10 @@
     Title="MauiBankingExercise">
 
     <ShellContent
-        Title="Customers"
+        Title="List Customer"
         ContentTemplate="{DataTemplate views:ListOfCustomersView}"
         Route="ListOfCustomersView" />
+
+   
 
 </Shell>
