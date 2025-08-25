@@ -23,7 +23,7 @@ namespace MauiBankingExercise.ViewModels
 
         public int AccountId
         {
-            get => _accountId;
+            get { return _accountId; }
             set
             {
                 _accountId = value;
@@ -34,7 +34,7 @@ namespace MauiBankingExercise.ViewModels
 
         public int CustomerId
         {
-            get => _customerId;
+            get { return _customerId; }
             set
             {
                 _customerId = value;
@@ -44,7 +44,7 @@ namespace MauiBankingExercise.ViewModels
 
         public Account? SelectedAccount
         {
-            get => _selectedAccount;
+            get { return _selectedAccount; }
             set
             {
                 _selectedAccount = value;
@@ -54,7 +54,7 @@ namespace MauiBankingExercise.ViewModels
 
         public decimal TransactionAmount
         {
-            get => _transactionAmount;
+            get { return _transactionAmount; }
             set
             {
                 _transactionAmount = value;
@@ -64,7 +64,7 @@ namespace MauiBankingExercise.ViewModels
 
         public string SelectedTransactionType
         {
-            get => _selectedTransactionType;
+            get { return _selectedTransactionType; }
             set
             {
                 _selectedTransactionType = value;
@@ -77,7 +77,6 @@ namespace MauiBankingExercise.ViewModels
         public TransactionViewModel(BankingDatabaseService databaseService)
         {
             _databaseService = databaseService;
-            //AddTransactionCommand = new Command(OnAddTransaction);
         }
 
         private void LoadAccountAndTransactions()
@@ -125,66 +124,6 @@ namespace MauiBankingExercise.ViewModels
             }
         }
 
-        //private async void OnAddTransaction()
-        //{
-        //    if (SelectedAccount == null)
-        //    {
-        //        await App.Current.MainPage.DisplayAlert("Error", "Account not found.", "OK");
-        //        return;
-        //    }
-
-        //    if (TransactionAmount <= 0)
-        //    {
-        //        await App.Current.MainPage.DisplayAlert("Error", "Enter a valid amount greater than 0.", "OK");
-        //        return;
-        //    }
-
-        //    if (string.IsNullOrEmpty(SelectedTransactionType))
-        //    {
-        //        await App.Current.MainPage.DisplayAlert("Error", "Please select a transaction type.", "OK");
-        //        return;
-        //    }
-
-        //    if (SelectedTransactionType == "Withdrawal" && TransactionAmount > SelectedAccount.AccountBalance)
-        //    {
-        //        await App.Current.MainPage.DisplayAlert("Error", "Insufficient balance for withdrawal.", "OK");
-        //        return;
-        //    }
-
-        //    try
-        //    {
-        //        // Determine sign of transaction
-        //        var amount = SelectedTransactionType == "Withdrawal" ? -TransactionAmount : TransactionAmount;
-                
-        //        var newTransaction = new Transaction
-        //        {
-        //            AccountId = SelectedAccount.AccountId,
-        //            TransactionDate = DateTime.Now,
-        //            Amount = amount,
-        //            Description = SelectedTransactionType
-        //        };
-
-        //        _databaseService.AddTransaction(newTransaction);
-
-        //        // Update account balance
-        //        SelectedAccount.AccountBalance += amount;
-        //        _databaseService.UpdateAccount(SelectedAccount);
-
-        //        // Add to UI and refresh
-        //        Transactions.Insert(0, newTransaction); // Add to top of list
-        //        OnPropertyChanged(nameof(SelectedAccount));
-
-        //        // Reset input
-        //        TransactionAmount = 0;
-        //        SelectedTransactionType = null;
-
-        //        await App.Current.MainPage.DisplayAlert("Success", 
-        //            $"{(amount > 0 ? "Deposit" : "Withdrawal")} of R{Math.Abs(amount):N2} completed successfully.", "OK");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        await App.Current.MainPage.DisplayAlert("Error", $"Transaction failed: {ex.Message}", "OK");
-        //    }
-        //}
+       
     }
 }
