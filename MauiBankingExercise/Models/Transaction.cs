@@ -1,6 +1,5 @@
 ﻿using SQLite;
 using SQLiteNetExtensions.Attributes;
-using System;
 
 namespace MauiBankingExercise.Models
 {
@@ -19,10 +18,11 @@ namespace MauiBankingExercise.Models
         public decimal Amount { get; set; }
         public string Description { get; set; }
 
-        [ManyToOne]
-        public Account Account { get; set; }
-
-        [ManyToOne]
+        // Navigation properties
+        [ManyToOne(CascadeOperations = CascadeOperation.CascadeRead)]
         public TransactionType TransactionType { get; set; }
+
+        [ManyToOne(CascadeOperations = CascadeOperation.CascadeRead)]
+        public Account Account { get; set; }
     }
 }

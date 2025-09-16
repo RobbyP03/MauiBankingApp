@@ -30,7 +30,12 @@ namespace MauiBankingExercise.Services
 
         public Customer? GetCustomerById(int id)
         {
-            return _dbConnection.Table<Customer>().FirstOrDefault(c => c.CustomerId == id);
+            var customer = _dbConnection.Table<Customer>().FirstOrDefault(c => c.CustomerId == id);
+            if (customer != null)
+            {
+                _dbConnection.GetChildren(customer); // Load related data
+            }
+            return customer;
         }
 
         public List<Account> GetAccountsByCustomerId(int customerId)
@@ -38,13 +43,11 @@ namespace MauiBankingExercise.Services
             var accounts = _dbConnection.Table<Account>()
                                .Where(a => a.CustomerId == customerId)
                                .ToList();
-
             // Load related data for each account
             foreach (var account in accounts)
             {
                 _dbConnection.GetChildren(account);
             }
-
             return accounts;
         }
 
@@ -52,12 +55,10 @@ namespace MauiBankingExercise.Services
         {
             var account = _dbConnection.Table<Account>()
                             .FirstOrDefault(a => a.AccountId == accountId);
-
             if (account != null)
             {
                 _dbConnection.GetChildren(account);
             }
-
             return account;
         }
 
@@ -73,10 +74,52 @@ namespace MauiBankingExercise.Services
 
         public List<Transaction> GetTransactionsByAccountId(int accountId)
         {
-            return _dbConnection.Table<Transaction>()
+            var transactions = _dbConnection.Table<Transaction>()
                                .Where(t => t.AccountId == accountId)
                                .OrderByDescending(t => t.TransactionDate)
                                .ToList();
+
+            // Load related data for each transaction (TransactionType, etc.)
+            foreach (var transaction in transactions)
+            {
+                _dbConnection.GetChildren(transaction);
+            }
+
+            return transactions;
         }
+
+        // NEW METHOD: Get all transactions for a customer across all their accounts
+        public List<Transaction> GetAllTransactionsByCustomerId(int customerId)
+        {
+            // Get all accounts for the customer first
+            var customerAccounts = GetAccountsByCustomerId(customerId);
+
+            var allTransactions = new List<Transaction>();
+
+            foreach (var account in customerAccounts)
+            {
+                var accountTransactions = GetTransactionsByAccountId(account.AccountId);
+                foreach (var transaction in accountTransactions)
+                {
+                    // Add account reference for display purposes
+                    transaction.Account = account;
+                    allTransactions.Add(transaction);
+                }
+            }
+
+            return allTransactions;
+        }
+
+        public List<TransactionType> GetAllTransactionTypes()
+        {
+            return _dbConnection.Table<TransactionType>().ToList();
+        }
+
+        public TransactionType GetTransactionTypeByName(string name)
+        {
+            return _dbConnection.Table<TransactionType>()
+                .FirstOrDefault(tt => tt.Name == name);
+        }
+      
     }
 }
