@@ -1,4 +1,5 @@
-﻿using MauiBankingExercise.Models;
+﻿using MauiBankingExercise.Interface;
+using MauiBankingExercise.Models;
 using SQLite;
 using SQLiteNetExtensions.Extensions;
 using System.Collections.Generic;
