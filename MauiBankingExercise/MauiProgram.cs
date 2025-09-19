@@ -1,4 +1,7 @@
-﻿using MauiBankingExercise.Services;
+﻿using CommunityToolkit.Maui;
+using MauiBankingExercise.Configuration;
+using MauiBankingExercise.Interface;
+using MauiBankingExercise.Services;
 using MauiBankingExercise.ViewModels;
 using MauiBankingExercise.Views;
 using Microsoft.Extensions.Logging;
@@ -13,6 +16,7 @@ namespace MauiBankingExercise
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
+                .UseMauiCommunityToolkit()
                 .ConfigureFonts(fonts =>
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -22,16 +26,20 @@ namespace MauiBankingExercise
 #if DEBUG
     		builder.Logging.AddDebug();
 #endif
-            builder.Services.AddSingleton<ListOfCustomersView>();
-            builder.Services.AddSingleton<ListOfCustomersViewModel>();
+            builder.Services.AddSingleton<ApplicationSettings>(); 
 
-            builder.Services.AddTransient<CustomerDashboardView>();
+            
+            builder.Services.AddTransient<IBankingService, BankingDataApiService>();
+
+           
+            builder.Services.AddTransient<ListOfCustomersViewModel>();
             builder.Services.AddTransient<CustomerDashboardViewModel>();
-
-            builder.Services.AddTransient<TransactionView>();
             builder.Services.AddTransient<TransactionViewModel>();
 
-            builder.Services.AddSingleton<BankingDatabaseService>();
+
+            builder.Services.AddTransient<ListOfCustomersView>();
+            builder.Services.AddTransient<CustomerDashboardView>();
+            builder.Services.AddTransient<TransactionView>();
 
             return builder.Build();
         }

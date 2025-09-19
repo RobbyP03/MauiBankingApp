@@ -1,35 +1,35 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using MauiBankingExercise.Services;
-using MauiBankingExercise.Models;
 using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 using System.Windows.Input;
+using MauiBankingExercise.Models;
+using MauiBankingExercise.Interface;
+using Microsoft.Maui.Dispatching; // for MainThread
 
 namespace MauiBankingExercise.ViewModels
 {
     public class ListOfCustomersViewModel : BaseViewModel
     {
-        private BankingDatabaseService _databaseService;
-        public ICommand CustomerSelectedCommand { get; set; }
-        private ObservableCollection<Customer> _customers = new ObservableCollection<Customer>();
+        private readonly IBankingService _bankingService;
+
+        public ICommand CustomerSelectedCommand { get; }
+
+        private ObservableCollection<Customer> _customers = new();
         private Customer? _selectedCustomer;
 
         public Customer? SelectedCustomer
         {
-            get { return _selectedCustomer; }
+            get => _selectedCustomer;
             set
             {
                 _selectedCustomer = value;
-                OnPropertyChanged(nameof(SelectedCustomer));
+                OnPropertyChanged();
             }
         }
 
         public ObservableCollection<Customer> TheCustomers
         {
-            get { return _customers; }
+            get => _customers;
             set
             {
                 _customers = value;
@@ -37,14 +37,13 @@ namespace MauiBankingExercise.ViewModels
             }
         }
 
-        public ListOfCustomersViewModel(BankingDatabaseService service)
+        public ListOfCustomersViewModel(IBankingService bankingService)
         {
-            _databaseService = service;
-
-            CustomerSelectedCommand = new Command(CustomerSelected);
+            _bankingService = bankingService;
+            CustomerSelectedCommand = new Command(async obj => await CustomerSelectedAsync());
         }
 
-        private async void CustomerSelected(object obj)
+        private async Task CustomerSelectedAsync()
         {
             if (SelectedCustomer != null)
             {
@@ -52,35 +51,37 @@ namespace MauiBankingExercise.ViewModels
                 {
                     { "CustomerId", SelectedCustomer.CustomerId }
                 };
+
+                // Navigate asynchronously to customer dashboard
                 await AppShell.Current.GoToAsync("CustomerDashboardroute", param);
             }
-
         }
-        public override void OnAppearing()
+
+        public override async Task OnAppearingAsync()
         {
-            base.OnAppearing();
-
             SelectedCustomer = null;
-            LoadCustomers();
+            await LoadCustomersAsync();
         }
 
-        private void LoadCustomers()
+        private async Task LoadCustomersAsync()
         {
             try
             {
-                var customers = _databaseService.GetAllCustomers();
-                TheCustomers.Clear();
-                foreach (var customer in customers)
+                var customers = await _bankingService.GetAllCustomers();
+
+                MainThread.BeginInvokeOnMainThread(() =>
                 {
-                    TheCustomers.Add(customer);
-                }
+                    TheCustomers.Clear();
+                    foreach (var customer in customers)
+                    {
+                        TheCustomers.Add(customer);
+                    }
+                });
             }
             catch (Exception ex)
             {
-
                 System.Diagnostics.Debug.WriteLine($"Error loading customers: {ex.Message}");
             }
-
         }
     }
 }

@@ -1,40 +1,43 @@
 ﻿using MauiBankingExercise.Models;
-using MauiBankingExercise.Services;
+using MauiBankingExercise.Interface;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
+using Microsoft.Maui.Controls; // for Application.Current.MainPage
 
 namespace MauiBankingExercise.ViewModels
 {
     [QueryProperty(nameof(CustomerId), nameof(CustomerId))]
-    [QueryProperty(nameof(AccountId), nameof(AccountId))] 
+    [QueryProperty(nameof(AccountId), nameof(AccountId))]
     public class TransactionViewModel : BaseViewModel
     {
-        private BankingDatabaseService _databaseService;
+        private readonly IBankingService _bankingService;
+
         private Account? _selectedAccount;
         private int _accountId;
         private int _customerId;
         private decimal _transactionAmount;
         private string _selectedTransactionType = string.Empty;
 
-        public ObservableCollection<string> TransactionTypes { get; set; } = new ObservableCollection<string> { "Deposit", "Withdrawal" };
-        public ObservableCollection<Transaction> Transactions { get; set; } = new ObservableCollection<Transaction>();
+        public ObservableCollection<string> TransactionTypes { get; set; } = new();
+        public ObservableCollection<Transaction> Transactions { get; set; } = new();
 
         public int AccountId
         {
-            get { return _accountId; }
+            get => _accountId;
             set
             {
                 _accountId = value;
                 OnPropertyChanged();
-                LoadAccountAndTransactions();
+                _ = LoadAccountAndTransactionsAsync();
             }
         }
 
         public int CustomerId
         {
-            get { return _customerId; }
+            get => _customerId;
             set
             {
                 _customerId = value;
@@ -44,7 +47,7 @@ namespace MauiBankingExercise.ViewModels
 
         public Account? SelectedAccount
         {
-            get { return _selectedAccount; }
+            get => _selectedAccount;
             set
             {
                 _selectedAccount = value;
@@ -54,7 +57,7 @@ namespace MauiBankingExercise.ViewModels
 
         public decimal TransactionAmount
         {
-            get { return _transactionAmount; }
+            get => _transactionAmount;
             set
             {
                 _transactionAmount = value;
@@ -64,7 +67,7 @@ namespace MauiBankingExercise.ViewModels
 
         public string SelectedTransactionType
         {
-            get { return _selectedTransactionType; }
+            get => _selectedTransactionType;
             set
             {
                 _selectedTransactionType = value;
@@ -74,45 +77,43 @@ namespace MauiBankingExercise.ViewModels
 
         public ICommand AddTransactionCommand { get; }
 
-        public TransactionViewModel(BankingDatabaseService databaseService)
+        public TransactionViewModel(IBankingService bankingService)
         {
-            _databaseService = databaseService;
-            AddTransactionCommand = new Command(OnAddTransaction);
-            LoadTransactionTypes(); 
+            _bankingService = bankingService;
+            AddTransactionCommand = new Command(async () => await OnAddTransactionAsync());
+            _ = LoadTransactionTypesAsync();
         }
 
-        private void LoadTransactionTypes()
+        // Load transaction types from API
+        private async Task LoadTransactionTypesAsync()
         {
             try
             {
                 TransactionTypes.Clear();
-                var types = _databaseService.GetAllTransactionTypes();
+                var types = await _bankingService.GetAllTransactionTypes(); // returns TransactionType
                 foreach (var type in types)
                 {
-                    TransactionTypes.Add(type.Name);
+                    TransactionTypes.Add(type.Name); 
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error loading transaction types: {ex.Message}");
-              
                 TransactionTypes.Clear();
-            
             }
         }
 
-        private void LoadAccountAndTransactions()
+        // Load selected account and its transactions
+        private async Task LoadAccountAndTransactionsAsync()
         {
             if (AccountId > 0 && CustomerId > 0)
             {
                 try
                 {
-                    var accounts = _databaseService.GetAccountsByCustomerId(CustomerId);
-                    SelectedAccount = accounts.FirstOrDefault(a => a.AccountId == AccountId);
-
+                    SelectedAccount = await _bankingService.GetAccountById(AccountId);
                     if (SelectedAccount != null)
                     {
-                        LoadTransactions();
+                        await LoadTransactionsAsync();
                     }
                 }
                 catch (Exception ex)
@@ -122,20 +123,20 @@ namespace MauiBankingExercise.ViewModels
             }
         }
 
-        private void LoadTransactions()
+        // Load transactions for the selected account
+        private async Task LoadTransactionsAsync()
         {
             try
             {
                 Transactions.Clear();
-                if (SelectedAccount?.Transactions != null)
-                {
-                    var sortedTransactions = SelectedAccount.Transactions
-                        .OrderByDescending(t => t.TransactionDate);
+                var accountTransactions = await _bankingService.GetTransactionsByAccountId(AccountId);
 
-                    foreach (var transaction in sortedTransactions)
-                    {
-                        Transactions.Add(transaction);
-                    }
+                var sortedTransactions = accountTransactions
+                    .OrderByDescending(t => t.TransactionDate);
+
+                foreach (var transaction in sortedTransactions)
+                {
+                    Transactions.Add(transaction);
                 }
             }
             catch (Exception ex)
@@ -144,34 +145,42 @@ namespace MauiBankingExercise.ViewModels
             }
         }
 
-        private async void OnAddTransaction()
+        // Add a transaction
+        private async Task OnAddTransactionAsync()
         {
             if (SelectedAccount == null || TransactionAmount <= 0 || string.IsNullOrEmpty(SelectedTransactionType))
             {
-                // Show error message to user
-                await Application.Current.MainPage.DisplayAlert("Error", "Please enter a valid amount and select transaction type.", "OK");
+                await Application.Current.MainPage.DisplayAlert(
+                    "Error",
+                    "Please enter a valid amount and select transaction type.",
+                    "OK");
                 return;
             }
 
             try
             {
-                // Check for sufficient funds on withdrawal
+                // Check withdrawal balance
                 if (SelectedTransactionType == "Withdrawal" && TransactionAmount > SelectedAccount.AccountBalance)
                 {
-                    await Application.Current.MainPage.DisplayAlert("Insufficient Funds",
-                        $"Cannot withdraw ${TransactionAmount:F2}. Available balance: ${SelectedAccount.AccountBalance:F2}", "OK");
+                    await Application.Current.MainPage.DisplayAlert(
+                        "Insufficient Funds",
+                        $"Cannot withdraw R{TransactionAmount:F2}. Available balance: R{SelectedAccount.AccountBalance:F2}",
+                        "OK");
                     return;
                 }
 
-                // Get the TransactionType from database based on the name
-                var transactionType = _databaseService.GetTransactionTypeByName(SelectedTransactionType);
+                // Get TransactionType object
+                var transactionType = await _bankingService.GetTransactionTypeByName(SelectedTransactionType);
                 if (transactionType == null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Transaction type not found: {SelectedTransactionType}");
-                    await Application.Current.MainPage.DisplayAlert("Error", "Invalid transaction type.", "OK");
+                    await Application.Current.MainPage.DisplayAlert(
+                        "Error",
+                        "Invalid transaction type.",
+                        "OK");
                     return;
                 }
 
+                // Create transaction
                 var transaction = new Transaction
                 {
                     AccountId = AccountId,
@@ -181,35 +190,41 @@ namespace MauiBankingExercise.ViewModels
                     Description = $"{SelectedTransactionType} of R{TransactionAmount:F2}"
                 };
 
-                _databaseService.AddTransaction(transaction);
+                await _bankingService.AddTransaction(transaction);
 
+                // Update account balance
                 SelectedAccount.AccountBalance += transaction.Amount;
-                _databaseService.UpdateAccount(SelectedAccount);
+                await _bankingService.UpdateAccount(SelectedAccount);
 
-               
-                await Application.Current.MainPage.DisplayAlert("Success",
-                    $"Transaction completed successfully!\nNew balance: R{SelectedAccount.AccountBalance:F2}", "OK");
+                await Application.Current.MainPage.DisplayAlert(
+                    "Success",
+                    $"Transaction completed successfully!\nNew balance: R{SelectedAccount.AccountBalance:F2}",
+                    "OK");
 
-                LoadAccountAndTransactions();
+                await LoadAccountAndTransactionsAsync();
 
-                
                 TransactionAmount = 0;
                 SelectedTransactionType = string.Empty;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error adding transaction: {ex.Message}");
-                await Application.Current.MainPage.DisplayAlert("Error", "Failed to process transaction. Please try again.", "OK");
+                await Application.Current.MainPage.DisplayAlert(
+                    "Error",
+                    "Failed to process transaction. Please try again.",
+                    "OK");
             }
         }
 
-        public override void OnAppearing()
+
+        public override async Task OnAppearingAsync()
         {
-            base.OnAppearing();
+            // No need to call base.OnAppearing() since BaseViewModel now uses Task
             if (AccountId > 0 && CustomerId > 0)
             {
-                LoadAccountAndTransactions();
+                await LoadAccountAndTransactionsAsync();
             }
+            await LoadTransactionTypesAsync();
         }
     }
 }

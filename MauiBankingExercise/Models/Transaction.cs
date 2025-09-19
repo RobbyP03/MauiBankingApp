@@ -24,5 +24,6 @@ namespace MauiBankingExercise.Models
 
         [ManyToOne(CascadeOperations = CascadeOperation.CascadeRead)]
         public Account Account { get; set; }
+        public object Name { get; internal set; }
     }
 }

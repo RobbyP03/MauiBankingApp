@@ -53,7 +53,7 @@ namespace MauiBankingExercise.Services
 
         public async Task<List<Customer>> GetAllCustomers()
         {
-            Uri uri = new Uri($"{_applicationSettings.ServiceUrl}/Customers");
+            Uri uri = new Uri($"{_applicationSettings.ServiceUrl}/api/Customers");
 
             try
             {
@@ -81,7 +81,7 @@ namespace MauiBankingExercise.Services
 
         public async Task<Customer> GetCustomersById(int id)
         {
-            Uri uri = new Uri($"{_applicationSettings.ServiceUrl}/Customers/{id}");
+            Uri uri = new Uri($"{_applicationSettings.ServiceUrl}/api/Customers/{id}");
 
             try
             {
@@ -110,34 +110,56 @@ namespace MauiBankingExercise.Services
 
         public async Task<Account> GetAccountByCustomerId(int customerid)
         {
-            Uri uri = new Uri($"{_applicationSettings.ServiceUrl}/Accounts/customer/{customerid}");
+            Uri uri = new Uri($"{_applicationSettings.ServiceUrl}/api/Accounts/customer/{customerid}");
+
+            Debug.WriteLine($"Requesting account for customer ID: {customerid}");
+            Debug.WriteLine($"Request URI: {uri}");
 
             try
             {
                 HttpResponseMessage response = await _apiClient.GetAsync(uri);
 
+                Debug.WriteLine($"Response status: {response.StatusCode}");
+                Debug.WriteLine($"Response success: {response.IsSuccessStatusCode}");
+
                 if (response.IsSuccessStatusCode)
                 {
                     string content = await response.Content.ReadAsStringAsync();
+                    Debug.WriteLine($"Response content: {content}");
 
-                    // Deserialize directly to AgeRestriction objects since API now returns them
                     Account? oneAccount = JsonSerializer.Deserialize<Account>(content, _jsonSerializerOptions);
 
+                    if (oneAccount != null)
+                    {
+                        Debug.WriteLine($"Deserialized account - ID: {oneAccount.AccountId}, Balance: {oneAccount.AccountBalance}");
+                    }
+                    else
+                    {
+                        Debug.WriteLine("Deserialized account is null");
+                    }
+
                     return oneAccount ?? new Account();
+                }
+                else
+                {
+                    Debug.WriteLine($"HTTP Error: {response.StatusCode} - {response.ReasonPhrase}");
+                    string errorContent = await response.Content.ReadAsStringAsync();
+                    Debug.WriteLine($"Error content: {errorContent}");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error: {ex.Message}");
+                Debug.WriteLine($"Exception in GetAccountByCustomerId: {ex.Message}");
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
                 throw new BankingApiFailedException($"Failed to fetch account data for {customerid} from API.");
             }
-            throw new BankingApiFailedException($"Failed to fetch account data for {customerid} from API.");
 
+            throw new BankingApiFailedException($"Failed to fetch account data for {customerid} from API.");
         }
 
         public async Task<Account> GetAccountById(int accountid)
         {
-            Uri uri = new Uri($"{_applicationSettings.ServiceUrl}/Accounts/{accountid}");
+            Uri uri = new Uri($"{_applicationSettings.ServiceUrl}/api/Accounts/{accountid}");
 
             try
             {
@@ -163,9 +185,9 @@ namespace MauiBankingExercise.Services
 
         }
 
-        public async Task<Transaction> GetTransactionsByAccountId(int accountid)
+        public async Task<List<Transaction>> GetTransactionsByAccountId(int accountid)
         {
-            Uri uri = new Uri($"{_applicationSettings.ServiceUrl}/Transactions/account/{accountid}");
+            Uri uri = new Uri($"{_applicationSettings.ServiceUrl}/api/Transactions/account/{accountid}");
 
             try
             {
@@ -174,25 +196,47 @@ namespace MauiBankingExercise.Services
                 if (response.IsSuccessStatusCode)
                 {
                     string content = await response.Content.ReadAsStringAsync();
+                    List<Transaction>? accountTransactions = JsonSerializer.Deserialize<List<Transaction>>(content, _jsonSerializerOptions);
 
-                    // Deserialize directly to AgeRestriction objects since API now returns them
-                    Transaction? accountTransaction = JsonSerializer.Deserialize<Transaction>(content, _jsonSerializerOptions);
-
-                    return accountTransaction ?? new Transaction();
+                    return accountTransactions ?? new List<Transaction>();
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error: {ex.Message}");
-                throw new BankingApiFailedException($"Failed to fetch customer data for {accountid} from API.");
+                throw new BankingApiFailedException($"Failed to fetch account transactions for {accountid} from API.");
             }
-            throw new BankingApiFailedException($"Failed to fetch customer data for {accountid} from API.");
-
+            throw new BankingApiFailedException($"Failed to fetch account transactions for {accountid} from API.");
         }
 
-        public async Task<List<Transaction>> GetAllTransactionTypes()
+        public async Task<List<Transaction>> GetTransactionsByCustomerId(int customerId)
         {
-            Uri uri = new Uri($"{_applicationSettings.ServiceUrl}/Transactions/types");
+            Uri uri = new Uri($"{_applicationSettings.ServiceUrl}/api/Transactions/customer/{customerId}");
+
+            try
+            {
+                HttpResponseMessage response = await _apiClient.GetAsync(uri);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string content = await response.Content.ReadAsStringAsync();
+                    List<Transaction>? customerTransactions = JsonSerializer.Deserialize<List<Transaction>>(content, _jsonSerializerOptions);
+
+                    return customerTransactions ?? new List<Transaction>();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error: {ex.Message}");
+                throw new BankingApiFailedException($"Failed to fetch customer transactions for {customerId} from API.");
+            }
+            throw new BankingApiFailedException($"Failed to fetch customer transactions for {customerId} from API.");
+        }
+
+
+        public async Task<List<TransactionType>> GetAllTransactionTypes()
+        {
+            Uri uri = new Uri($"{_applicationSettings.ServiceUrl}/api/Transactions/types");
 
             try
             {
@@ -202,10 +246,11 @@ namespace MauiBankingExercise.Services
                 {
                     string content = await response.Content.ReadAsStringAsync();
 
-                    // Deserialize directly to AgeRestriction objects since API now returns them
-                    List<Transaction>? allTransTypes = JsonSerializer.Deserialize<List<Transaction>>(content, _jsonSerializerOptions);
+                    //  Deserialize into TransactionType (not Transaction)
+                    List<TransactionType>? allTransTypes =
+                        JsonSerializer.Deserialize<List<TransactionType>>(content, _jsonSerializerOptions);
 
-                    return allTransTypes ?? new List<Transaction>();
+                    return allTransTypes ?? new List<TransactionType>();
                 }
             }
             catch (Exception ex)
@@ -214,8 +259,67 @@ namespace MauiBankingExercise.Services
                 throw new BankingApiFailedException("Failed to fetch transaction types from API.");
             }
 
-            return new List<Transaction>();
+            return new List<TransactionType>();
         }
 
+        public async Task AddTransaction(Transaction transaction)
+        {
+            Uri uri = new Uri($"{_applicationSettings.ServiceUrl}/api/Transactions/{transaction.AccountId}");
+
+            try
+            {
+                string jsonContent = JsonSerializer.Serialize(transaction, _jsonSerializerOptions);
+                StringContent content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await _apiClient.PutAsync(uri, content);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Debug.WriteLine($"Update failed with status: {response.StatusCode}");
+                    throw new BankingApiFailedException($"Failed to update transaction with ID {transaction.AccountId}. Status: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error: {ex.Message}");
+                throw new BankingApiFailedException($"Failed to update transaction data for ID {transaction.AccountId}.");
+            }
+        }
+        public async Task UpdateAccount(Account account)
+        {
+            Uri uri = new Uri($"{_applicationSettings.ServiceUrl}/api/Accounts/{account.AccountId}");
+
+            try
+            {
+                string jsonContent = JsonSerializer.Serialize(account, _jsonSerializerOptions);
+                StringContent content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await _apiClient.PutAsync(uri, content);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Debug.WriteLine($"Update failed with status: {response.StatusCode}");
+                    throw new BankingApiFailedException($"Failed to update account with ID {account.AccountId}. Status: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error: {ex.Message}");
+                throw new BankingApiFailedException($"Failed to update account data for ID {account.AccountId}.");
+            }
+        }
+        public async Task<TransactionType?> GetTransactionTypeByName(string name)
+        {
+            try
+            {
+                var types = await GetAllTransactionTypes();
+                return types.FirstOrDefault(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error fetching transaction type '{name}': {ex.Message}");
+                return null;
+            }
+        }
     }
 }
